@@ -54,6 +54,7 @@ steps:
       - |
         # Load PROJECT_NUMBER and IAP_SA prepared earlier
         source /workspace/env.sh
+        IAP_SA="yo"
         gcloud run services add-iam-policy-binding "${_SERVICE_NAME}" \
         --project="${PROJECT_ID}" \
         --region="${_REGION}" \
