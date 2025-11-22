@@ -18,7 +18,7 @@ steps:
         # Share variables with subsequent steps via a workspace file
         echo "export PROJECT_NUMBER=${PROJECT_NUMBER}" > /workspace/env.sh
         echo "export IAP_SA=service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" >> /workspace/env.sh
-        chmod +x /workspace/env.sh
+        echo "${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" > /workspace/iap_sa.sh
     id: prepare-env
     entrypoint: bash
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
@@ -52,13 +52,12 @@ steps:
     args:
       - '-ceu'
       - |
-        # Load PROJECT_NUMBER and IAP_SA prepared earlier
-        source /workspace/env.sh
-        IAP_SA="yo"
+        # Load IAP_SA prepared earlier
+        cat /workspace/iap_sa.sh
         gcloud run services add-iam-policy-binding "${_SERVICE_NAME}" \
         --project="${PROJECT_ID}" \
         --region="${_REGION}" \
-        --member="serviceAccount:$IAP_SA" \
+        --member="serviceAccount:$(cat /workspace/iap_sa.sh)" \
         --role="roles/run.invoker"
     id: grant-invoker-to-iap-sa
     entrypoint: bash
