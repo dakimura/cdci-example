@@ -1,7 +1,7 @@
 [project]
 name = "streamlit-example"
 version = "0.1.0"
-description = "Add your description here"
+description = "Example streamlit app"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

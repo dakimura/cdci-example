@@ -1,0 +1,70 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _SERVICE_NAME: example-app
+  _REGION: us-central1
+images:
+  - >-
+    ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_SERVICE_NAME}/${_SERVICE_NAME}:${SHORT_SHA}
+steps:
+  # Prepare environment variables that depend on the actual PROJECT_ID
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    args:
+      # -c: Execute command string, -e: Exit immediately on error, -u: Error on undefined variables
+      - '-ceu'
+      - |
+        PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
+        echo "Resolved PROJECT_NUMBER=${PROJECT_NUMBER} for PROJECT_ID=${PROJECT_ID}"
+        # Share variables with subsequent steps via a workspace file
+        echo "export PROJECT_NUMBER=${PROJECT_NUMBER}" > /workspace/env.sh
+        echo "export IAP_SA=service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" >> /workspace/env.sh
+        chmod +x /workspace/env.sh
+    id: prepare-env
+    entrypoint: bash
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    args:
+      # -c: Execute command string, -e: Exit immediately on error, -u: Error on undefined variables
+      - '-ceu'
+      - |
+        gcloud auth configure-docker "${_REGION}-docker.pkg.dev" --quiet
+    id: configure-docker
+    entrypoint: bash
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_SERVICE_NAME}/${_SERVICE_NAME}:${SHORT_SHA}", "."]
+    id: docker-build
+  - name: gcr.io/cloud-builders/docker
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_SERVICE_NAME}/${_SERVICE_NAME}:${SHORT_SHA}']
+    id: docker-push
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    args:
+      - '-ceu'
+      - |
+        gcloud beta run deploy "${_SERVICE_NAME}" \
+          --project="${PROJECT_ID}" \
+          --platform=managed \
+          --region="${_REGION}" \
+          --service-account="${_SERVICE_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+          --image="${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_SERVICE_NAME}/${_SERVICE_NAME}:${SHORT_SHA}" \
+          --allow-unauthenticated \
+    id: deploy-cloudrun
+    entrypoint: bash
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    args:
+      - '-ceu'
+      - |
+        # Load PROJECT_NUMBER and IAP_SA prepared earlier
+        source /workspace/env.sh
+        gcloud run services add-iam-policy-binding "${_SERVICE_NAME}" \
+        --project="${PROJECT_ID}" \
+        --region="${_REGION}" \
+        --member="serviceAccount:${IAP_SA}" \
+        --role="roles/run.invoker"
+    id: grant-invoker-to-iap-sa
+    entrypoint: bash
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    args:
+      - '-ceu'
+      - >
+        echo "Deployed: $(gcloud run services describe "${_SERVICE_NAME}" --project="${PROJECT_ID}" --region="${_REGION}" --format='value(status.url)')"
+    id: print-url
+    entrypoint: bash
