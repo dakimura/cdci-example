@@ -57,7 +57,7 @@ steps:
         gcloud run services add-iam-policy-binding "${_SERVICE_NAME}" \
         --project="${PROJECT_ID}" \
         --region="${_REGION}" \
-        --member="serviceAccount:${IAP_SA}" \
+        --member="serviceAccount:$IAP_SA" \
         --role="roles/run.invoker"
     id: grant-invoker-to-iap-sa
     entrypoint: bash
