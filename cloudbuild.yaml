@@ -14,11 +14,7 @@ steps:
       - '-ceu'
       - |
         PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
-        echo "Resolved PROJECT_NUMBER=${PROJECT_NUMBER} for PROJECT_ID=${PROJECT_ID}"
-        # Share variables with subsequent steps via a workspace file
-        echo "export PROJECT_NUMBER=${PROJECT_NUMBER}" > /workspace/env.sh
-        echo "export IAP_SA=service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" >> /workspace/env.sh
-        echo "${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" > /workspace/iap_sa.sh
+        echo "service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" > /workspace/iap_sa.sh
     id: prepare-env
     entrypoint: bash
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
@@ -52,8 +48,6 @@ steps:
     args:
       - '-ceu'
       - |
-        # Load IAP_SA prepared earlier
-        cat /workspace/iap_sa.sh
         gcloud run services add-iam-policy-binding "${_SERVICE_NAME}" \
         --project="${PROJECT_ID}" \
         --region="${_REGION}" \
