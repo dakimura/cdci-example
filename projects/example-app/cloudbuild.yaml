@@ -26,7 +26,7 @@ steps:
     id: configure-docker
     entrypoint: bash
   - name: 'gcr.io/cloud-builders/docker'
-    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_SERVICE_NAME}/${_SERVICE_NAME}:${SHORT_SHA}", "."]
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_SERVICE_NAME}/${_SERVICE_NAME}:${SHORT_SHA}", "projects/example-app/"]
     id: docker-build
   - name: gcr.io/cloud-builders/docker
     args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_SERVICE_NAME}/${_SERVICE_NAME}:${SHORT_SHA}']
