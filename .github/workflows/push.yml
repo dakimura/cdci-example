@@ -1,8 +1,8 @@
-name: Build and Push to Artifact Registry
+name: Preview Deployment on Pull Request
 
 on:
-  push:
-    branches: [ "main" ]
+  pull_request:
+    types: [opened, synchronize] # PRオープン時と、新しいコミットがプッシュされた時
 
 env:
   GCP_PROJECT_ID: "akkie-dev"
@@ -18,9 +18,11 @@ jobs:
     runs-on: ubuntu-latest
 
     # Workload Identity を使うために必須の権限設定
+    # Cloud Run デプロイと PR コメントのために権限を設定
     permissions:
       contents: 'read'
       id-token: 'write'
+      pull-requests: 'write' # PRにコメントするために必要
 
     steps:
       - name: Checkout code
@@ -41,7 +43,35 @@ jobs:
 
       # 3. Docker Build & Push
       - name: 'Build and Push Container'
-        run: |
-          DOCKER_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          docker build -t "$DOCKER_TAG" ./projects/example-app
-          docker push "$DOCKER_TAG"
+        run: | # PR の head_sha をタグに使用. 後続のステップで使うために IMAGE_TAG を出力
+          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.event.pull_request.head.sha }}"
+          echo "Building image with tag: $IMAGE_TAG"
+          docker build -t "$IMAGE_TAG" .
+          docker push "$IMAGE_TAG"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # 4. Cloud Run にデプロイ
+      - name: 'Deploy to Cloud Run'
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: pr-${{ github.event.number }} # サービス名を pr-<PR番号> とする
+          region: ${{ env.REGION }}
+          image: ${{ steps.build.outputs.IMAGE_TAG }}
+          # 🚨 外部からアクセスできるようにする設定。必要に応じて `--no-allow-unauthenticated` に変更
+          flags: '--allow-unauthenticated'
+
+      # 5. プルリクエストに URL をコメント
+      - name: 'Add Preview URL to PR Comment'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const serviceUrl = '${{ steps.deploy.outputs.url }}';
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `**Preview URL** \n\n**Service Name:** \`pr-${prNumber}\`\n**URL:** ${serviceUrl}`
+            });
