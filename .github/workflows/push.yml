@@ -60,7 +60,9 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ steps.build.outputs.IMAGE_TAG }}
           # 🚨 外部からアクセスできるようにする設定。必要に応じて `--no-allow-unauthenticated` に変更
-          flags: '--allow-unauthenticated'
+          flags: |
+            --allow-unauthenticated
+            --service-account=example-app@akkie-dev.iam.gserviceaccount.com
 
       # 5. プルリクエストに URL をコメント
       - name: 'Add Preview URL to PR Comment'
