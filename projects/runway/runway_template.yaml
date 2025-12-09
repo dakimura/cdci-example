@@ -1,0 +1,25 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: my-cloud-run-service # サービス名
+  namespace: my-project-id # プロジェクトID（オプション）
+spec:
+  template:
+    metadata:
+      # このサービスのリビジョンに適用される設定
+      annotations:
+        run.googleapis.com/ingress: "all" # 外部からのアクセス設定
+    spec:
+      containers:
+      - image: gcr.io/cloudrun/hello # デプロイするコンテナイメージ
+        resources:
+          limits:
+            cpu: "1000m" # CPU制限 (1コア)
+            memory: "512Mi" # メモリ制限
+        env:
+        - name: MY_VARIABLE # 環境変数
+          value: "Hello Cloud Run"
+      serviceAccountName: my-service-account@my-project-id.iam.gserviceaccount.com # サービスアカウント
+  traffic:
+  - percent: 100
+    latestRevision: true # 最新リビジョンにトラフィックを100%ルーティング

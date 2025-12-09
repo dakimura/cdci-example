@@ -1,0 +1,10 @@
+[project]
+name = "example-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14.0"
+dependencies = [
+    "google-cloud-firestore>=2.21.0",
+    "google-cloud-kms>=2.26.0",
+]

@@ -1,0 +1,6 @@
+127.0.0.1:12345 {
+    reverse_proxy 127.0.0.1:3000
+    tls internal
+}
+
+# run the streamlit app by:  streamlit run --server.address=127.0.0.1 --server.port=3000 streamlit_app.py

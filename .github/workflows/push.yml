@@ -1,0 +1,47 @@
+name: Build and Push to Artifact Registry
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  GCP_PROJECT_ID: "akkie-dev"
+  REGION: "asia-northeast1" # 東京リージョンの場合。自身の環境に合わせて変更してください
+  REPOSITORY: "runway-docker-repo" # 事前に作成した Artifact Registry のリポジトリ名
+  IMAGE_NAME: "example-app"
+  # 先ほど gcloud コマンドで確認した Provider ID
+  WORKLOAD_IDENTITY_PROVIDER: "projects/838262913247/locations/global/workloadIdentityPools/runway-github-pool/providers/runway-github-provider"
+  SERVICE_ACCOUNT: "runway-github-actions-sa@akkie-dev.iam.gserviceaccount.com"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    # Workload Identity を使うために必須の権限設定
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Google Cloud 認証
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      # 2. Docker を Artifact Registry に対して認証
+      - name: 'Docker Auth'
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # 3. Docker Build & Push
+      - name: 'Build and Push Container'
+        run: |
+          DOCKER_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          docker build -t "$DOCKER_TAG" ./projects/example-app
+          docker push "$DOCKER_TAG"
