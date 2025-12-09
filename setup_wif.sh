@@ -68,10 +68,16 @@ gcloud projects add-iam-policy-binding "${GCP_PROJECT_ID}" \
 WORKLOAD_IDENTITY_POOL_ID=$(gcloud iam workload-identity-pools describe "${WIF_POOL_NAME}" --project="${GCP_PROJECT_ID}" --location="global" --format="value(name)")
 echo "WORKLOAD_IDENTITY_POOL_ID=${WORKLOAD_IDENTITY_POOL_ID}"
 
+# Workflow Identity Federationによる認証
 gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
     --project="${GCP_PROJECT_ID}" \
     --role="roles/iam.workloadIdentityUser" \
     --member="principalSet://iam.googleapis.com/${WORKLOAD_IDENTITY_POOL_ID}/attribute.repository/${GITHUB_REPO}"
+
+# Cloud Runをデプロイする権限を与えておく
+gcloud projects add-iam-policy-binding "${GCP_PROJECT_ID}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/run.admin"
 
 # GitHub Actions で使う値の確認
 echo "Workload Identity Provider Name that will be used on Github Actions:"
