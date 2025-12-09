@@ -1,0 +1,64 @@
+name: Cleanup Preview Environment
+
+on:
+  pull_request:
+    types: [closed] # PRが閉じられた（マージまたはクローズされた）ときに実行
+
+env:
+  GCP_PROJECT_ID: "akkie-dev"
+  REGION: "asia-northeast1"
+  # Workload Identity の設定値（前回のワークフローと共通）
+  WORKLOAD_IDENTITY_PROVIDER: "projects/838262913247/locations/global/workloadIdentityPools/runway-github-pool/providers/runway-github-provider"
+  SERVICE_ACCOUNT: "github-actions-sa@akkie-dev.iam.gserviceaccount.com"
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    # Cloud Run の削除と PR コメントのために権限を設定
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      pull-requests: 'write' # PRにコメントするために必要
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Google Cloud 認証
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      # 2. Cloud Run プレビューサービスを削除
+      - name: 'Delete Cloud Run Service'
+        id: delete
+        # サービス名は前回のデプロイで使った 'pr-<PR番号>' と一致させる
+        run: |
+          SERVICE_NAME="pr-${{ github.event.number }}"
+          echo "Attempting to delete Cloud Run service: $SERVICE_NAME"
+          
+          # サービスが存在するか確認し、存在すれば削除する
+          # '--quiet' で確認プロンプトをスキップ、'--format=disable'で成功時の出力を抑制
+          gcloud run services delete $SERVICE_NAME \
+            --region=${{ env.REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --quiet || echo "Service $SERVICE_NAME not found or already deleted."
+
+      # 3. プルリクエストに削除完了をコメント
+      - name: 'Add Cleanup Complete Comment'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const message = `🗑️ **Preview environment has been cleaned up.**\n\nCloud Run service \`pr-${prNumber}\` has been deleted.`;
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: message
+            });

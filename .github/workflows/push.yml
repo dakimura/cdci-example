@@ -43,6 +43,7 @@ jobs:
 
       # 3. Docker Build & Push
       - name: 'Build and Push Container'
+        id: build
         run: | # PR の head_sha をタグに使用. 後続のステップで使うために IMAGE_TAG を出力
           IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.event.pull_request.head.sha }}"
           echo "Building image with tag: $IMAGE_TAG"
