@@ -8,9 +8,7 @@ env:
   GCP_PROJECT_ID: "akkie-dev"
   REGION: "asia-northeast1"
   REPOSITORY: "my-docker-repo"
-  IMAGE_NAME: "example-app"
-  # 本番環境のサービス名 (任意の名前に変更可)
-  PROD_SERVICE_NAME: "prod-example-app"
+  SERVICE_NAME: "example-app"
   # Workload Identity の設定値
   WORKLOAD_IDENTITY_PROVIDER: "projects/838262913247/locations/global/workloadIdentityPools/runway-github-pool/providers/runway-github-provider"
   SERVICE_ACCOUNT: "runway-github-actions-sa@akkie-dev.iam.gserviceaccount.com"
@@ -46,12 +44,12 @@ jobs:
         id: build
         # mainブランチではコミットSHAと'latest'タグの両方を使うのが一般的. 両方のタグをPush -> デプロイで使用するタグをLATEST_TAGに設定
         run: |
-          COMMIT_SHA_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          LATEST_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest"
+          COMMIT_SHA_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          LATEST_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:latest"
           
           echo "Building image with tags: $COMMIT_SHA_TAG, $LATEST_TAG"
           
-          docker build -t "$COMMIT_SHA_TAG" -t "$LATEST_TAG" ./projects/${{env.pro
+          docker build -t "$COMMIT_SHA_TAG" -t "$LATEST_TAG" ./projects/${{env.SERVICE_NAME}}/
           
           docker push "$COMMIT_SHA_TAG"
           docker push "$LATEST_TAG"
@@ -62,7 +60,7 @@ jobs:
       - name: 'Deploy to Cloud Run Production'
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: ${{ env.PROD_SERVICE_NAME }} # 本番環境の固定サービス名
+          service: ${{ env.SERVICE_NAME }} # 本番環境の固定サービス名
           region: ${{ env.REGION }}
           image: ${{ steps.build.outputs.IMAGE_TAG }} # latestタグのイメージを使用
           # 本番環境なので、必要に応じて --no-allow-unauthenticated (認証必須) に変更してください
@@ -72,5 +70,5 @@ jobs:
       - name: 'Deployment Complete'
         # デプロイされたURLを確認したい場合は、以下のgcloud run services describeコマンドを使用します
         run: | 
-          echo "✅ Cloud Run Production Service ${{ env.PROD_SERVICE_NAME }} deployed successfully!"
-          gcloud run services describe ${{ env.PROD_SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)'
+          echo "✅ Cloud Run Production Service ${{ env.SERVICE_NAME }} deployed successfully!"
+          gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)'
