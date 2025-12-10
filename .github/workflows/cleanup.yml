@@ -9,7 +9,7 @@ env:
   REGION: "asia-northeast1"
   # Workload Identity の設定値（前回のワークフローと共通）
   WORKLOAD_IDENTITY_PROVIDER: "projects/838262913247/locations/global/workloadIdentityPools/runway-github-pool/providers/runway-github-provider"
-  SERVICE_ACCOUNT: "github-actions-sa@akkie-dev.iam.gserviceaccount.com"
+  SERVICE_ACCOUNT: "runway-github-actions-sa@akkie-dev.iam.gserviceaccount.com"
 
 jobs:
   cleanup:
