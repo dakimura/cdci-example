@@ -7,7 +7,7 @@ on:
 env:
   GCP_PROJECT_ID: "akkie-dev"
   REGION: "asia-northeast1"
-  REPOSITORY: "my-docker-repo"
+  REPOSITORY: "runway-docker-repo"
   SERVICE_NAME: "example-app"
   # Workload Identity の設定値
   WORKLOAD_IDENTITY_PROVIDER: "projects/838262913247/locations/global/workloadIdentityPools/runway-github-pool/providers/runway-github-provider"
