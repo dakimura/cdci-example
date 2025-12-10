@@ -13,7 +13,7 @@ env:
   PROD_SERVICE_NAME: "prod-example-app"
   # Workload Identity の設定値
   WORKLOAD_IDENTITY_PROVIDER: "projects/838262913247/locations/global/workloadIdentityPools/runway-github-pool/providers/runway-github-provider"
-  SERVICE_ACCOUNT: "github-actions-sa@akkie-dev.iam.gserviceaccount.com"
+  SERVICE_ACCOUNT: "runway-github-actions-sa@akkie-dev.iam.gserviceaccount.com"
 
 jobs:
   build-and-deploy-prod:
@@ -44,21 +44,17 @@ jobs:
       # 3. Docker Build & Push
       - name: 'Build and Push Container'
         id: build
-        run: |
-          # mainブランチではコミットSHAと'latest'タグの両方を使うのが一般的
+        run: | # mainブランチではコミットSHAと'latest'タグの両方を使うのが一般的. 両方のタグをPush -> デプロイで使用するタグをLATEST_TAGに設定
           COMMIT_SHA_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           LATEST_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest"
           
           echo "Building image with tags: $COMMIT_SHA_TAG, $LATEST_TAG"
           
-          # イメージをビルド
           docker build -t "$COMMIT_SHA_TAG" -t "$LATEST_TAG" ./projects/${{env.pro
           
-          # 両方のタグをPush
           docker push "$COMMIT_SHA_TAG"
           docker push "$LATEST_TAG"
           
-          # デプロイで使用するタグをLATEST_TAGに設定
           echo "IMAGE_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
 
       # 4. Cloud Run 本番サービスにデプロイ
@@ -73,7 +69,6 @@ jobs:
 
       # 5. デプロイ完了メッセージ
       - name: 'Deployment Complete'
-        run: |
+        run: | # デプロイされたURLを確認したい場合は、以下のgcloud run services describeコマンドを使用します
           echo "✅ Cloud Run Production Service ${{ env.PROD_SERVICE_NAME }} deployed successfully!"
-          # デプロイされたURLを確認したい場合は、以下のコマンドを使用します
           gcloud run services describe ${{ env.PROD_SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)'
