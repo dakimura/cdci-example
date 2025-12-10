@@ -44,7 +44,8 @@ jobs:
       # 3. Docker Build & Push
       - name: 'Build and Push Container'
         id: build
-        run: | # mainブランチではコミットSHAと'latest'タグの両方を使うのが一般的. 両方のタグをPush -> デプロイで使用するタグをLATEST_TAGに設定
+        # mainブランチではコミットSHAと'latest'タグの両方を使うのが一般的. 両方のタグをPush -> デプロイで使用するタグをLATEST_TAGに設定
+        run: |
           COMMIT_SHA_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           LATEST_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest"
           
