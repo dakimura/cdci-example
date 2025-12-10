@@ -63,8 +63,10 @@ jobs:
           service: ${{ env.SERVICE_NAME }} # 本番環境の固定サービス名
           region: ${{ env.REGION }}
           image: ${{ steps.build.outputs.IMAGE_TAG }} # latestタグのイメージを使用
-          # 本番環境なので、必要に応じて --no-allow-unauthenticated (認証必須) に変更してください
-          flags: '--allow-unauthenticated'
+          # 🚨 外部からアクセスできるようにする設定。必要に応じて `--no-allow-unauthenticated` に変更
+          flags: |
+            --allow-unauthenticated
+            --service-account=example-app@akkie-dev.iam.gserviceaccount.com
 
       # 5. デプロイ完了メッセージ
       - name: 'Deployment Complete'
